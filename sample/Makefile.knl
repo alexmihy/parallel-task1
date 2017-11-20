@@ -1,0 +1,143 @@
+# Computation mode
+# USE_GPU = true
+USE_MIC = true
+
+# Platform dependent paths
+# Lomonosov
+CXX = icc
+BOOST_DIR = ~/_scratch/boost_1_59_0
+PROJECT_PATH = /home/i.afanasiev/graph_library/
+
+# Include paths...
+Include_Path = -I $(PROJECT_PATH) -I /home/i.afanasiev/memkind-bin/include
+
+# Library paths...
+Libraries = -fopenmp -lmemkind
+Library_Path = -L /home/i.afanasiev/memkind-bin/lib
+
+# CPU Compiler flags...
+CXXFLAGS = -O2 -w -m64 -fpermissive -std=c++11
+ifdef USE_MIC
+KNLFLAGS = -xmic-avx512
+endif
+
+# Paths to gpu algorithms from current sample
+VPATH=./:../algorithm/sssp/gpu/:../algorithm/mst/gpu/:../include/node_data:../algorithm/scc/gpu:../algorithm/bridges/gpu:../algorithm/bfs/gpu
+
+.DEFAULT_GOAL := all
+
+##########
+# binaries
+##########
+
+all: graph_generator graph_optimization sssp bfs scc mst transitive_closure bridges
+
+graph_generator: create_folders graph_generator.o node_data.o
+	$(CXX) object_files/graph_generator.o object_files/node_data.o $(Library_Path) -fopenmp $(LDFLAGS) -o ./bin/graph_generator
+
+graph_optimization: create_folders graph_optimization.o node_data.o
+	$(CXX) object_files/graph_optimization.o object_files/node_data.o $(Library_Path) $(Libraries) $(LDFLAGS) -o ./bin/graph_optimization
+
+sssp: create_folders sssp.o node_data.o
+	$(CXX) object_files/sssp.o object_files/node_data.o $(Library_Path) $(Libraries) $(LDFLAGS) -o ./bin/sssp
+
+bfs: create_folders bfs.o node_data.o
+	$(CXX) object_files/bfs.o object_files/node_data.o $(Library_Path) $(Libraries) $(LDFLAGS) -o ./bin/bfs
+
+scc: create_folders scc.o node_data.o
+	$(CXX) object_files/scc.o object_files/node_data.o $(Library_Path) $(Libraries) $(LDFLAGS) -o ./bin/scc
+
+mst: create_folders mst.o node_data.o
+	$(CXX) object_files/mst.o object_files/node_data.o $(Library_Path) $(Libraries) $(LDFLAGS) -o ./bin/mst
+
+bridges: create_folders bridges.o node_data.o tarjan.o
+	$(CXX) object_files/bridges.o object_files/node_data.o object_files/tarjan.o $(Library_Path) $(Libraries) $(LDFLAGS) -o ./bin/bridges
+
+transitive_closure: create_folders transitive_closure.o node_data.o
+	$(CXX) object_files/transitive_closure.o object_files/node_data.o $(Library_Path) $(Libraries) $(LDFLAGS) -o ./bin/transitive_closure
+
+subgraph_isomorphism: create_folders bridges.o node_data.o subgraph_isomorphism.o
+	$(CXX) object_files/subgraph_isomorphism.o object_files/node_data.o $(Library_Path) $(Libraries) $(LDFLAGS) -o ./bin/subgraph_isomorphism
+
+##################
+# CPP sample files
+##################
+
+graph_generator.o: graph_generator.cpp
+	$(CXX) $(CXXFLAGS) $(Include_Path) -c graph_generator.cpp -o object_files/graph_generator.o -fopenmp
+
+graph_optimization.o: graph_optimization.cpp
+	$(CXX) $(CXXFLAGS) $(Include_Path) -c graph_optimization.cpp -o object_files/graph_optimization.o -fopenmp
+
+sssp.o: sssp.cpp
+	$(CXX) $(CXXFLAGS) $(Include_Path) -c sssp.cpp -o object_files/sssp.o -fopenmp
+
+mst.o: mst.cpp
+	$(CXX) $(CXXFLAGS) $(Include_Path) -c mst.cpp -o object_files/mst.o -fopenmp
+
+scc.o: scc.cpp
+	$(CXX) $(CXXFLAGS) $(KNLFLAGS) $(Include_Path) -c scc.cpp -o object_files/scc.o -fopenmp
+
+bridges.o: bridges.cpp
+	$(CXX) $(CXXFLAGS) $(Include_Path) -c bridges.cpp -o object_files/bridges.o -fopenmp
+
+transitive_closure.o: transitive_closure.cpp
+	$(CXX) $(CXXFLAGS) $(Include_Path) -c transitive_closure.cpp -o object_files/transitive_closure.o -fopenmp
+
+subgraph_isomorphism.o: subgraph_isomorphism.cpp
+	$(CXX) $(CXXFLAGS) $(Include_Path) -c subgraph_isomorphism.cpp -o object_files/subgraph_isomorphism.o -fopenmp
+
+bfs.o: bfs.cpp
+	$(CXX) $(CXXFLAGS) $(Include_Path) -c bfs.cpp -o object_files/bfs.o -fopenmp
+
+#################
+# other functions
+#################
+
+node_data.o: node_data.cpp
+	$(CXX) $(CXXFLAGS) $(Include_Path) -c $(PROJECT_PATH)/include/node_data/node_data.cpp -o object_files/node_data.o -fopenmp
+
+#################
+# CUDA operations
+#################
+
+boruvka.o: boruvka.cu
+	$(CUDA_COMPILER) $(CUDA_FLAGS) $(Include_Path) -c $(PROJECT_PATH)/algorithm/mst/gpu/boruvka.cu -o object_files/boruvka.o
+
+bellman_ford.o: bellman_ford.cu
+	$(CUDA_COMPILER) $(CUDA_FLAGS) $(Include_Path) -c $(PROJECT_PATH)/algorithm/sssp/gpu/bellman_ford.cu -o object_files/bellman_ford.o
+
+forward_backward.o: forward_backward.cu
+	$(CUDA_COMPILER) $(CUDA_FLAGS) $(Include_Path) -c $(PROJECT_PATH)/algorithm/scc/gpu/forward_backward.cu -o object_files/forward_backward.o
+
+large_graph_forward_backward.o: large_graph_forward_backward.cu
+	$(CUDA_COMPILER) $(CUDA_FLAGS) $(Include_Path) -c $(PROJECT_PATH)/algorithm/scc/gpu/large_graph_forward_backward.cu -o object_files/large_graph_forward_backward.o
+
+tarjan.o: tarjan.cu
+	$(CUDA_COMPILER) $(CUDA_FLAGS) $(Include_Path) -c $(PROJECT_PATH)/algorithm/bridges/gpu/tarjan.cu -o object_files/tarjan.o
+
+device_bfs.o: bfs.cu
+	$(CUDA_COMPILER) $(CUDA_FLAGS) $(Include_Path) -c $(PROJECT_PATH)/algorithm/bfs/gpu/bfs.cu -o object_files/device_bfs.o
+
+#############
+# File system
+#############
+
+create_folders:
+	-mkdir -p ./bin
+	-cp graph_library.sh ./bin
+	-mkdir -p ./object_files
+
+clean:
+	-rm -f object_files/*.o
+	-rmdir object_files
+	-rm bin/graph_generator
+	-rm bin/scc
+	-rm bin/sssp
+	-rm bin/apsp
+	-rm bin/mst
+	-rm bin/bridges
+	-rm bin/graph_optimization
+	-rm bin/transitive_closure
+	-rm bin/subgraph_isomorphism
+	-rm bin/bfs

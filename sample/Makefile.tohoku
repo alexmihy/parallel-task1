@@ -1,0 +1,63 @@
+# Computation mode
+
+# Platform dependent paths
+# Tohoku
+CXX = sxc++
+BOOST_DIR = ~/_scratch/boost_1_59_0
+PROJECT_PATH = /uhome/y00697/big-graphs/
+
+# Include paths...
+Include_Path = -I $(PROJECT_PATH)
+
+# Library paths...
+Libraries = -K exceptions
+
+# CPU Compiler flags...
+CXXFLAGS = -p -K exceptions
+
+.DEFAULT_GOAL := all
+
+##########
+# binaries
+##########
+
+all: sssp bfs
+
+sssp: create_folders sssp.o
+	$(CXX) object_files/sssp.o $(Library_Path) $(Libraries) $(LDFLAGS) -o ./bin/sssp
+
+bfs: create_folders bfs.o
+	$(CXX) object_files/bfs.o $(Library_Path) $(Libraries) $(LDFLAGS) -o ./bin/bfs
+
+##################
+# CPP sample files
+##################
+
+sssp.o: sssp.cpp
+	$(CXX) $(CXXFLAGS) $(Include_Path) -c sssp.cpp -o object_files/sssp.o
+
+bfs.o: bfs.cpp
+	$(CXX) $(CXXFLAGS) $(Include_Path) -c bfs.cpp -o object_files/bfs.o
+
+#############
+# File system
+#############
+
+create_folders:
+	-mkdir -p ./bin
+	-cp graph_library.sh ./bin
+	-mkdir -p ./object_files
+
+clean:
+	-rm -f object_files/*.o
+	-rm -rf object_files
+	-rm bin/graph_generator
+	-rm bin/scc
+	-rm bin/sssp
+	-rm bin/apsp
+	-rm bin/mst
+	-rm bin/bridges
+	-rm bin/graph_optimization
+	-rm bin/transitive_closure
+	-rm bin/subgraph_isomorphism
+	-rm bin/bfs
